@@ -1,6 +1,6 @@
 # This is a sample Python script.
 
-# Press Mayús+F10 to execute it or replace it with your code.
+# Press Mayus+F10 to execute it or replace it with your code.
 # Press Double Shift to search everywhere for classes, files, tool windows, actions, and settings.
 
 import getopt
@@ -65,7 +65,7 @@ if __name__ == '__main__':
     #Abrir el fichero .csv y cargarlo en un dataframe de pandas
     ml_dataset = pd.read_csv(iFile)
 
-    #comprobar que los datos se han cargado bien. Cuidado con las cabeceras, la primera línea por defecto la considerara como la que almacena los nombres de los atributos
+    #comprobar que los datos se han cargado bien. Cuidado con las cabeceras, la primera linea por defecto la considerara como la que almacena los nombres de los atributos
     # comprobar los parametros por defecto del pd.read_csv en lo referente a las cabeceras si no se quiere lo comentado
 
     #print(ml_dataset.head(5))
@@ -211,9 +211,9 @@ if __name__ == '__main__':
 
 
 
-    target_map = {'0': 0, '1': 1} #Categorías en las que vamos a encasillar las instancias
-    ml_dataset['__target__'] = ml_dataset['TARGET'].map(str).map(target_map) #Transformamos el dataset en base a las categorías anteriores, teniendo en cuenta el target o atributo que encasilla las insatancias
-    del ml_dataset['TARGET'] #Borramos el anterior el dataset anterior
+    target_map = {'0': 0, '1': 1} #Categorias en las que vamos a encasillar las instancias
+    ml_dataset['__target__'] = ml_dataset['TARGET'].map(str).map(target_map) #Transformamos el dataset en base a las categorias anteriores, teniendo en cuenta el target o atributo que encasilla las insatancias
+    del ml_dataset['TARGET'] #Borramos el anterior el dataset 
 
     # Remove rows for which the target is unknown.
     ml_dataset = ml_dataset[~ml_dataset['__target__'].isnull()]
@@ -222,7 +222,7 @@ if __name__ == '__main__':
 
 
     train, test = train_test_split(ml_dataset,test_size=0.2,random_state=42,stratify=ml_dataset[['__target__']]) #Elegimos la muestra para entrenar el modelo,
-    print(train.head(5))                                                                                         #EL 20% será para test, índice aleatorio de 42
+    print(train.head(5))                                                                                         #EL 20% sera para test, indice aleatorio de 42
     print(train['__target__'].value_counts())                                                                    #y en base al dataset obtenido antes
     print(test['__target__'].value_counts())
 
@@ -496,14 +496,14 @@ if __name__ == '__main__':
                            {'feature': 'num_var1_0', 'impute_with': 'MEAN'},
                            {'feature': 'imp_var43_emit_ult1', 'impute_with': 'MEAN'}]
 
-    #Según el diccionario anterior, se eliminan los atributos que se hayan dado
+    #Segun el diccionario anterior, se eliminan los atributos que se hayan dado
     for feature in drop_rows_when_missing:
         train = train[train[feature].notnull()]
         test = test[test[feature].notnull()]
         print('Dropped missing records in %s' % feature)
 
-    # Según el diccionario anterior, se imputan los valores mediante la media, la mediana, una categoría, el primer valor o una constante. 
-    # Después se actualizan los valores tanto en el test como en el train 
+    # Segun el diccionario anterior, se imputan los valores mediante la media, la mediana, una categoria, el primer valor o una constante. 
+    # Despues se actualizan los valores tanto en el test como en el train 
     for feature in impute_when_missing:
         if feature['impute_with'] == 'MEAN':
             v = train[feature['feature']].mean()
@@ -625,7 +625,7 @@ if __name__ == '__main__':
                         'imp_var43_emit_ult1': 'AVGSTD'}
     
     #Se reescalan los valores con respecto al diccionario dado antes por si la muestra se encuentra desbalanceada.
-    #Dependiendo del atributo se utiliza MINMAX o la desviación típica
+    #Dependiendo del atributo se utiliza MINMAX o la desviacion tipica
     for (feature_name, rescale_method) in rescale_features.items():
         if rescale_method == 'MINMAX':
             _min = train[feature_name].min()
@@ -635,7 +635,7 @@ if __name__ == '__main__':
         else:
             shift = train[feature_name].mean()
             scale = train[feature_name].std()
-        if scale == 0.: #Si no hay desviación típica se ignora ese atributo
+        if scale == 0.: #Si no hay desviacion tipica se ignora ese atributo
             del train[feature_name]
             del test[feature_name]
             print('Feature %s was dropped because it has no variance' % feature_name)
@@ -920,7 +920,7 @@ if __name__ == '__main__':
         test = test[test[feature].notnull()]
         print('Dropped missing records in %s' % feature)
 
-    # Según el diccionario anterior, se imputan los valores con la media, la mediana, una nueva categoría, el valor del primer índice o una constante
+    # Segun el diccionario anterior, se imputan los valores con la media, la mediana, una nueva categoria, el valor del primer indice o una constante
     # Luego, se aplica a la muestra de entrenamiento y de test
     for feature in impute_when_missing:
         if feature['impute_with'] == 'MEAN':
@@ -1042,7 +1042,7 @@ if __name__ == '__main__':
                         'ind_var33_0': 'AVGSTD', 'num_var37': 'AVGSTD', 'num_var39': 'AVGSTD', 'num_var1_0': 'AVGSTD',
                         'imp_var43_emit_ult1': 'AVGSTD'}
 
-    # Para cada elemento del diccionario anterior, se aplica según esté establecido el método de reescalado de MINMAX o la desviación típica.
+    # Para cada elemento del diccionario anterior, se aplica segun este establecido el metodo de reescalado de MINMAX o la desviacion tipica.
     for (feature_name, rescale_method) in rescale_features.items():
         if rescale_method == 'MINMAX':
             _min = train[feature_name].min()
