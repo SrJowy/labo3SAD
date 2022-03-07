@@ -34,9 +34,9 @@ if __name__ == '__main__':
         if opt in ('-o','--output'):
             oFile = arg
         elif opt == '-k':
-            k = arg
+            k = int(arg)
         elif opt ==  '-d':
-            d = arg
+            d = int(arg)
         elif opt in ('-p', '--path'):
             p = arg
         elif opt in ('-f', '--file'):
@@ -127,17 +127,14 @@ if __name__ == '__main__':
         categories = categories_str_r.split(",")
     else:
         categories = list(ml_dataset[classifier].unique())
-        print(categories)
     
     target_map = { categories[i] : i for i in range(0, len(categories))}
-    print(ml_dataset.head(120))
     ml_dataset['__target__'] = ml_dataset[classifier].map(str).map(target_map)
-    print(ml_dataset.head(120))
     del ml_dataset[classifier]
     
-    #ml_dataset = ml_dataset[~ml_dataset['__target__'].isnull()]
+    ml_dataset = ml_dataset[~ml_dataset['__target__'].isnull()]
     print(f)
-    print(ml_dataset.head(120))
+    #print(ml_dataset.head(120))
     
     train, test = train_test_split(ml_dataset,test_size=0.2,random_state=42,stratify=ml_dataset[['__target__']]) #Elegimos la muestra para entrenar el modelo,
     print(train.head(5))                                                                                         #EL 20% sera para test, indice aleatorio de 42
@@ -248,11 +245,11 @@ if __name__ == '__main__':
     #testXUnder,testYUnder = undersample.fit_resample(testX, testY)
 
     # Calcular el valor del knn
-    clf = KNeighborsClassifier(n_neighbors=5,
+    clf = KNeighborsClassifier(n_neighbors=k,
                           weights='uniform',
                           algorithm='auto',
                           leaf_size=30,
-                          p=2)
+                          p=d)
     
     #k tendra que ser impar sino podria haber empates
 
@@ -296,9 +293,12 @@ if __name__ == '__main__':
     print(confusion_matrix(testY, predictions, labels=[1,0]))
     
     if oFile != "":    
-        f = open(oFile, mode = 'w')
+        f = open(oFile, mode='a')
+        f.write("\nk = " + str(k) + "\tp = " + str(d) + "\n\n")
         f.write(str(f1_score(testY, predictions, average=None))+ "\n")
         f.write(str(classification_report(testY,predictions))+ "\n")
-        f.write(str(confusion_matrix(testY, predictions, labels=[1,0])))
+        f.write(str(confusion_matrix(testY, predictions)) + "\n")
+        f.write("\n-------------------------------------------------\n")
+        f.close()
     
-print("bukatu da")
+print("fin")

@@ -8,15 +8,16 @@ from sklearn.model_selection import train_test_split
 from sklearn.metrics import f1_score
 from sklearn.metrics import classification_report
 from sklearn.metrics import confusion_matrix
-from sklearn.neighbors import KNeighborsClassifier
+from sklearn import tree
 
-k=1
-d=1
+mx = 3
+mss = 2
+msl = 1
 p='./'
 f="iris.csv"
 oFile=""
-aut = 1
-classifier = "Especie"
+aut = 0
+classifier = ""
 
 def datetime_to_epoch(d):
     return datetime.datetime(d).strftime('%s')
@@ -24,7 +25,7 @@ def datetime_to_epoch(d):
 if __name__ == '__main__':
     print('ARGV   :',sys.argv[1:])
     try:
-        options,remainder = getopt.getopt(sys.argv[1:],'o:k:d:p:f:h:c:a',['output=','k=','d=','path=','iFile','h','classifier'])
+        options,remainder = getopt.getopt(sys.argv[1:],'o:m:s:l:p:f:h:c:a',['output=','mx=','mss=','msl=','path=','iFile','h','classifier'])
     except getopt.GetoptError as err:
         print('ERROR:',err)
         sys.exit(1)
@@ -33,10 +34,12 @@ if __name__ == '__main__':
     for opt,arg in options:
         if opt in ('-o','--output'):
             oFile = arg
-        elif opt == '-k':
-            k = arg
-        elif opt ==  '-d':
-            d = arg
+        elif opt == '-m':
+            mx = int(arg)
+        elif opt ==  '-s':
+            mss = int(arg)
+        elif opt ==  '-l':
+            msl = int(arg)
         elif opt in ('-p', '--path'):
             p = arg
         elif opt in ('-f', '--file'):
@@ -127,17 +130,13 @@ if __name__ == '__main__':
         categories = categories_str_r.split(",")
     else:
         categories = list(ml_dataset[classifier].unique())
-        print(categories)
     
     target_map = { categories[i] : i for i in range(0, len(categories))}
-    print(ml_dataset.head(120))
     ml_dataset['__target__'] = ml_dataset[classifier].map(str).map(target_map)
-    print(ml_dataset.head(120))
     del ml_dataset[classifier]
     
     #ml_dataset = ml_dataset[~ml_dataset['__target__'].isnull()]
     print(f)
-    print(ml_dataset.head(120))
     
     train, test = train_test_split(ml_dataset,test_size=0.2,random_state=42,stratify=ml_dataset[['__target__']]) #Elegimos la muestra para entrenar el modelo,
     print(train.head(5))                                                                                         #EL 20% sera para test, indice aleatorio de 42
@@ -240,37 +239,18 @@ if __name__ == '__main__':
 
     trainY = np.array(train['__target__'])
     testY = np.array(test['__target__'])
-
-    # Balancear los datos en caso de que esten desbalanceados
-    #undersample = RandomUnderSampler(sampling_strategy=0.5)#la mayoria va a estar representada el doble de veces
-
-    #trainXUnder,trainYUnder = undersample.fit_resample(trainX,trainY)
-    #testXUnder,testYUnder = undersample.fit_resample(testX, testY)
-
-    # Calcular el valor del knn
-    clf = KNeighborsClassifier(n_neighbors=5,
-                          weights='uniform',
-                          algorithm='auto',
-                          leaf_size=30,
-                          p=2)
     
-    #k tendra que ser impar sino podria haber empates
-
-    # Ponemos a cada clase un peso balanceado
+    clf = tree.DecisionTreeClassifier(max_depth=mx,
+                                      min_samples_split=mss,
+                                      min_samples_leaf=msl)
+    
     clf.class_weight = "balanced"
-
-    # Introducimos los valores para el entrenamiento
-
-    clf.fit(trainX, trainY)
-
-
-# Build up our result dataset
-
-# The model is now trained, we can apply it to our test set:
-
+    
+    clf = clf.fit(trainX, trainY)
+    
     predictions = clf.predict(testX)
     probas = clf.predict_proba(testX)
-
+    
     predictions = pd.Series(data=predictions, index=testX.index, name='predicted_value')
     cols = [
         u'probability_of_value_%s' % label
@@ -296,9 +276,11 @@ if __name__ == '__main__':
     print(confusion_matrix(testY, predictions, labels=[1,0]))
     
     if oFile != "":    
-        f = open(oFile, mode = 'w')
+        f = open(oFile, mode = 'a')
+        f.write("\nmax-depth = " + str(mx) + "\tmin_samples_split = " + str(mss) + "\tmin_sample_leaf=" + str(msl) + "\n\n")
         f.write(str(f1_score(testY, predictions, average=None))+ "\n")
         f.write(str(classification_report(testY,predictions))+ "\n")
-        f.write(str(confusion_matrix(testY, predictions, labels=[1,0])))
+        f.write(str(confusion_matrix(testY, predictions))+ "\n")
+        f.write("\n-------------------------------------------------\n")
     
 print("bukatu da")
