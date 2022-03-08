@@ -10,7 +10,7 @@ do
     p_min=$3
     while [ $p_min -le $p_max ]
     do
-        python knn.py -k $k_min -d $p_min -a -c Especie -o f.txt
+        python knn.py -k $k_min -d $p_min -a -c Especie -o f.csv
         let p_min=p_min+1
     done
     let k_min=k_min+2

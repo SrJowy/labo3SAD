@@ -1,11 +1,12 @@
 from datetime import datetime
 import getopt
+import os
 import sys
 import numpy as np
 import pandas as pd
 from imblearn.under_sampling import RandomUnderSampler
 from sklearn.model_selection import train_test_split
-from sklearn.metrics import f1_score
+from sklearn.metrics import f1_score, precision_score, recall_score
 from sklearn.metrics import classification_report
 from sklearn.metrics import confusion_matrix
 from sklearn import tree
@@ -276,11 +277,11 @@ if __name__ == '__main__':
     print(confusion_matrix(testY, predictions, labels=[1,0]))
     
     if oFile != "":    
-        f = open(oFile, mode = 'a')
-        f.write("\nmax-depth = " + str(mx) + "\tmin_samples_split = " + str(mss) + "\tmin_sample_leaf=" + str(msl) + "\n\n")
-        f.write(str(f1_score(testY, predictions, average=None))+ "\n")
-        f.write(str(classification_report(testY,predictions))+ "\n")
-        f.write(str(confusion_matrix(testY, predictions))+ "\n")
-        f.write("\n-------------------------------------------------\n")
+        f = open(oFile, mode='a')
+        if os.path.getsize(oFile) == 0:
+            f.write("max_depth, min_samples_split, min_samples_leaf, f1_score, recall, precision\n")
+        f.write("%s, %s, %s" %(str(mx),str(mss), str(msl)))
+        f.write(", %s, %s, %s" %(str(f1_score(testY,predictions, average='macro')), str(recall_score(testY,predictions,average="macro")), str(precision_score(testY,predictions, average='macro')))+ "\n")
+        f.close()
     
 print("bukatu da")
