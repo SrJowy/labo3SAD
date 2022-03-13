@@ -295,7 +295,7 @@ if __name__ == '__main__':
 
     print(f1_score(testY, predictions, average=None))
     print(classification_report(testY,predictions))
-    print(confusion_matrix(testY, predictions, labels=[1,0]))
+    print(confusion_matrix(testY, predictions))
     
     if oFile != "":    
         f = open(oFile, mode='a')
