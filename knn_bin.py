@@ -17,8 +17,7 @@ d=1
 p='./'
 f="iris.csv"
 oFile=""
-aut = 1
-classifier = "TARGET"
+classifier = "Especie"
 
 def datetime_to_epoch(d):
     return datetime.datetime(d).strftime('%s')
@@ -26,7 +25,7 @@ def datetime_to_epoch(d):
 if __name__ == '__main__':
     print('ARGV   :',sys.argv[1:])
     try:
-        options,remainder = getopt.getopt(sys.argv[1:],'o:k:d:p:f:h:c:a',['output=','k=','d=','path=','iFile','h','classifier'])
+        options,remainder = getopt.getopt(sys.argv[1:],'o:k:d:p:f:h:c',['output=','k=','d=','path=','iFile','h','classifier'])
     except getopt.GetoptError as err:
         print('ERROR:',err)
         sys.exit(1)
@@ -48,8 +47,6 @@ if __name__ == '__main__':
             exit(1)
         elif opt in ('-c', '--classifier'):
             classifier = arg
-        elif opt in ('-a'):
-            aut = 1
 
     if p == './':
         iFile=p+str(f)
@@ -70,11 +67,14 @@ if __name__ == '__main__':
     
     columns = list(ml_dataset.columns)
     ml_dataset = ml_dataset[columns]
+    print(columns)
 
     catFeatures = []
     
     numFeatures = list(ml_dataset.columns)
-    numFeatures.remove(classifier) #Eliminar el classifier
+    print(classifier)
+    numFeatures.remove(classifier)
+    print(numFeatures)
     
     textFeatures = []
         
@@ -91,15 +91,9 @@ if __name__ == '__main__':
         else:
             ml_dataset[feature] = ml_dataset[feature].astype('double') #Cambiamos el tipo el del atributo a double
     
-    if aut == 0:    
-        categories_str = str (raw_input("Type all the categories of the dataset separeted by commas \n"))
-        categories_str_r = categories_str.replace('\r','')
-        categories = categories_str_r.split(",")
-        n_cat = len(categories)
-    else:
-        categories = list(ml_dataset[classifier].unique())
-        n_cat = len(categories)
-        print(categories)
+    categories = list(ml_dataset[classifier].unique())
+    n_cat = len(categories) #Para saber si es binario o multiclass
+    print(categories)
     
     target_map = { categories[i] : i for i in range(0, len(categories))}
     ml_dataset['__target__'] = ml_dataset[classifier].map(str).map(target_map)
@@ -109,40 +103,17 @@ if __name__ == '__main__':
     print(f)
     #print(ml_dataset.head(120))
     
-    train, test = train_test_split(ml_dataset,test_size=0.2,random_state=42,stratify=ml_dataset[['__target__']]) #Elegimos la muestra para entrenar el modelo,
-    print(train.head(5))                                                                                         #EL 20% sera para test, indice aleatorio de 42
-    print(train['__target__'].value_counts())                                                                    #y en base al dataset obtenido antes
+    train, test = train_test_split(ml_dataset,test_size=0.2,random_state=42,stratify=ml_dataset[['__target__']])
+    print(train.head(5))                                                                                         
+    print(train['__target__'].value_counts())                                                                    
     print(test['__target__'].value_counts())
     
-    if aut == 0:
-        drop_rows_when_missing = [item for item in str(input ("Select the features you want to remove if rows are missing.\n Type -1 if you want all of them or -2 if you want none. \n --> ")).split()]
-        impute_features = [item for item in str(input ("Select the features you want to impute if rows are missing.\n Type -1 if you want all of them or -2 if you want none.. \n --> ")).split()]
-    else:
-        drop_rows_when_missing = ['-2']
-        impute_features = ['-1']
+    drop_rows_when_missing = []
     
-    if drop_rows_when_missing[0] == '-1':
-        drop_rows_when_missing = list(ml_dataset.columns)
-        drop_rows_when_missing.remove(classifier)
-    elif drop_rows_when_missing[0] == '-2':
-        drop_rows_when_missing = []
-    
-    if impute_features[0] == '-1':
-        impute_features = list(ml_dataset.columns)
-        impute_features.remove('__target__')
-        if aut == 0:
-            param = raw_input("Select the parameter you want the features to be imputed with (MEAN, MEDIAN, CREATE_CATEGORY, MODE, CONSTANT)\n -->")
-            param = param.replace('\r','')
-        else:
-            param = 'MEAN'
-    elif impute_features[0] == '-2':
-        impute_features = []
-    else:
-        if aut == 0:
-            param = raw_input("Select the parameter you want the features to be imputed with (MEAN, MEDIAN, CREATE_CATEGORY, MODE, CONSTANT)\n -->")
-            param = param.replace('\r','')
-        else:
-            param = 'MEAN'
+    impute_features = list(ml_dataset.columns)
+    impute_features.remove('__target__')
+    param = 'MEAN'
+    print(impute_features)
     
     for feature in drop_rows_when_missing:
         train = train[train[feature].notnull()]
@@ -162,28 +133,9 @@ if __name__ == '__main__':
         train[feature] = train[feature].fillna(v)
         test[feature] = test[feature].fillna(v)
         
-    if aut == 0:
-        rescale_features = [item for item in str(input ("Select the features you want to rescale.\n Type -1 if you want all of them or -2 if you want none. \n --> ")).split()]
-    else:
-        rescale_features = ['-1']
-        
-    if rescale_features[0] == '-1':
         rescale_features = list(ml_dataset.columns)
         rescale_features.remove('__target__')
-        if aut == 0:
-            param = raw_input("Select the parameter you want the features to be rescaled with (MINMAX, AVGSTD)\n -->")
-            param = param.replace('\r','')
-        else:
-            param = 'AVGSTD'
-            
-    elif rescale_features[0] == '-2':
-        rescale_features = []
-    else:
-        if aut == 0:
-            param = raw_input("Select the parameter you want the features to be rescaled with (MINMAX, AVGSTD)\n -->")
-            param = param.replace('\r','')
-        else:
-            param = 'AVGSTD'
+        param = 'AVGSTD'
         
     for feature in rescale_features:
         if param == 'MINMAX':
@@ -263,7 +215,7 @@ if __name__ == '__main__':
 
     print(f1_score(testY, predictions, average=None))
     print(classification_report(testY,predictions))
-    print(confusion_matrix(testY, predictions, labels=[1,0]))
+    print(confusion_matrix(testY, predictions))
     
     if oFile != "":    
         f = open(oFile, mode='a')

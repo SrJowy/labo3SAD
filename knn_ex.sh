@@ -10,7 +10,8 @@ do
     p_min=$3
     while [ $p_min -le $p_max ]
     do
-        python knn.py -k $k_min -d $p_min -a -c Especie -o f.csv
+        python knn_def.py -k $k_min -d $p_min -o f.csv -m uniform
+        python knn_def.py -k $k_min -d $p_min -o f.csv -m distance
         let p_min=p_min+1
     done
     let k_min=k_min+2

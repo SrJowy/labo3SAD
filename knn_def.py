@@ -5,21 +5,27 @@
 
 from datetime import datetime
 import getopt
+import os
 import sys
 import numpy as np
 import pandas as pd
+from sklearn.utils import column_or_1d
 from imblearn.under_sampling import RandomUnderSampler
 from sklearn.model_selection import train_test_split
-from sklearn.metrics import f1_score
+from sklearn.metrics import f1_score, precision_score, recall_score
 from sklearn.metrics import classification_report
 from sklearn.metrics import confusion_matrix
 from sklearn.neighbors import KNeighborsClassifier
+import pickle
 
 k=1
 d=1
 p='./'
 f="iris.csv"
 oFile=""
+m="uniform"
+r=0
+classifier = "Especie"
 
 def datetime_to_epoch(d):
     return datetime.datetime(d).strftime('%s')
@@ -29,7 +35,7 @@ def datetime_to_epoch(d):
 if __name__ == '__main__':
     print('ARGV   :',sys.argv[1:])
     try:
-        options,remainder = getopt.getopt(sys.argv[1:],'o:k:d:p:f:h',['output=','k=','d=','path=','iFile','h'])
+        options,remainder = getopt.getopt(sys.argv[1:],'o:k:d:r:m:p:f:h',['output=','k=','d=','path=','iFile','h'])
     except getopt.GetoptError as err:
         print('ERROR:',err)
         sys.exit(1)
@@ -39,9 +45,9 @@ if __name__ == '__main__':
         if opt in ('-o','--output'):
             oFile = arg
         elif opt == '-k':
-            k = arg
+            k = int(arg)
         elif opt ==  '-d':
-            d = arg
+            d = int(arg)
         elif opt in ('-p', '--path'):
             p = arg
         elif opt in ('-f', '--file'):
@@ -49,6 +55,11 @@ if __name__ == '__main__':
         elif opt in ('-h','--help'):
             print(' -o outputFile \n -k numberOfItems \n -d distanceParameter \n -p inputFilePath \n -f inputFileName \n ')
             exit(1)
+        elif opt in ('-m'):
+            m = arg
+        elif opt in ('-r'):
+            r = arg
+        
 
     if p == './':
         iFile=p+str(f)
@@ -73,15 +84,22 @@ if __name__ == '__main__':
 
     #print(ml_dataset.head(5))
 
-    ml_dataset = ml_dataset[
-        ['Largo de sepalo', 'Ancho de sepalo', 'Largo de petalo', 'Ancho de petalo', 'Especie']]
+    #ml_dataset = ml_dataset[
+    #    ['Largo de sepalo', 'Ancho de sepalo', 'Largo de petalo', 'Ancho de petalo', 'Especie']]
+    
+    columns = list(ml_dataset.columns)
+    ml_dataset = ml_dataset[columns]
 
 
     # Se seleccionan los atributos del dataset que se van a utilizar en el modelo
 
 
     categorical_features = []
-    numerical_features = ['Largo de sepalo', 'Ancho de sepalo', 'Largo de petalo', 'Ancho de petalo']
+    #numerical_features = ['Largo de sepalo', 'Ancho de sepalo', 'Largo de petalo', 'Ancho de petalo']
+    
+    numerical_features = list(ml_dataset.columns)
+    numerical_features.remove(classifier)
+    
     text_features = []
     for feature in categorical_features:
         ml_dataset[feature] = ml_dataset[feature].apply(coerce_to_unicode) #Actualizar el texto a unicode
@@ -98,9 +116,12 @@ if __name__ == '__main__':
 
 
 
-    target_map = {'Iris-setosa': 0, 'Iris-versicolor': 1, 'Iris-virginica': 2} #Categorias en las que vamos a encasillar las instancias
-    ml_dataset['__target__'] = ml_dataset['Especie'].map(str).map(target_map) #Transformamos el dataset en base a las categorias anteriores, teniendo en cuenta el target o atributo que encasilla las insatancias
-    del ml_dataset['Especie'] #Borramos el anterior el dataset 
+    #target_map = {'Iris-setosa': 0, 'Iris-versicolor': 1, 'Iris-virginica': 2} #Categorias en las que vamos a encasillar las instancias
+    categories = list(ml_dataset[classifier].unique())
+    target_map = { categories[i] : i for i in range(0, len(categories))}
+    n_cat = len(target_map)
+    ml_dataset['__target__'] = ml_dataset[classifier].map(str).map(target_map) #Transformamos el dataset en base a las categorias anteriores, teniendo en cuenta el target o atributo que encasilla las insatancias
+    del ml_dataset[classifier] #Borramos el anterior el dataset 
 
     # Remove rows for which the target is unknown.
     ml_dataset = ml_dataset[~ml_dataset['__target__'].isnull()]
@@ -114,11 +135,15 @@ if __name__ == '__main__':
     print(test['__target__'].value_counts())
 
     drop_rows_when_missing = []
-    impute_when_missing = [{'feature': 'Largo de sepalo', 'impute_with': 'MEAN'},
-                           {'feature': 'Ancho de sepalo', 'impute_with': 'MEAN'},
-                           {'feature': 'Largo de petalo', 'impute_with': 'MEAN'},
-                           {'feature': 'Ancho de petalo', 'impute_with': 'MEAN'}]
-                           
+    #impute_when_missing = [{'feature': 'Largo de sepalo', 'impute_with': 'MEAN'},
+    #                       {'feature': 'Ancho de sepalo', 'impute_with': 'MEAN'},
+    #                       {'feature': 'Largo de petalo', 'impute_with': 'MEAN'},
+    #                       {'feature': 'Ancho de petalo', 'impute_with': 'MEAN'}]
+    column_vals = list(ml_dataset.columns)
+    column_vals.remove('__target__')
+    impute_when_missing = []
+    for i in range(0, len(column_vals)):
+        impute_when_missing.append({'feature': column_vals[i], 'impute_with' : 'MEAN'})
 
     #Segun el diccionario anterior, se eliminan los atributos que se hayan dado
     for feature in drop_rows_when_missing:
@@ -144,8 +169,12 @@ if __name__ == '__main__':
         #print('Imputed missing values in feature %s with value %s' % (feature['feature'], coerce_to_unicode(v)))
 
 
-
-    rescale_features = {}
+    #column_vals = list(ml_dataset.columns)
+    #column_vals.remove('__target__')
+    rescale_features={} #Usar cuando los valores estén desbalanceados
+    #for i in range(0, len(column_vals)): 
+    #    rescale_features.update({column_vals[i] : 'AVGSTD'})
+    
     
     #Se reescalan los valores con respecto al diccionario dado antes por si la muestra se encuentra desbalanceada.
     #Dependiendo del atributo se utiliza MINMAX o la desviacion tipica
@@ -183,14 +212,9 @@ if __name__ == '__main__':
     #trainXUnder,trainYUnder = undersample.fit_resample(trainX,trainY)
     #testXUnder,testYUnder = undersample.fit_resample(testX, testY)
 
-
-
-
-
-
     # Calcular el valor del knn
     clf = KNeighborsClassifier(n_neighbors=5,
-                          weights='uniform',
+                          weights=m,
                           algorithm='auto',
                           leaf_size=30,
                           p=2)
@@ -234,10 +258,23 @@ if __name__ == '__main__':
     print(classification_report(testY,predictions))
     print(confusion_matrix(testY, predictions))
     
-    #if oFile != "":    
-    #    f = open(oFile, mode = 'w')
-    #    f.write(str(f1_score(testY, predictions, average=None))+ "\n")
-    #    f.write(str(classification_report(testY,predictions))+ "\n")
-    #    f.write(str(confusion_matrix(testY, predictions, labels=[1,0])))
+    if oFile != "":    
+        f = open(oFile, mode='a')
+        if (n_cat == 2):
+            if os.path.getsize(oFile) == 0:
+                f.write("k, p, m, f1_score, recall, precision\n")
+            f.write("%s, %s, %s" %(str(k),str(d), m))
+            f.write(", %s, %s, %s" %(str(f1_score(testY,predictions)), str(recall_score(testY,predictions)), str(precision_score(testY,predictions)))+ "\n")
+        elif (n_cat > 2):
+            if os.path.getsize(oFile) == 0:
+                f.write("k, p, m, MACRO_f1_score, MICRO_f1_score, AVG_f1_score, AVG_recall, AVG_precision\n")
+            f.write("%s, %s, %s" %(str(k),str(d), m))
+            f.write(", %s, %s, %s %s %s" %(str(f1_score(testY,predictions, average='macro')), str(f1_score(testY,predictions, average='micro')), str(f1_score(testY,predictions, average='weighted')), str(recall_score(testY,predictions,average="macro")), str(precision_score(testY,predictions, average='macro')))+ "\n")
+        f.close()
+        
+    if r == '1':
+        model = "knn.sav"
+        saved_model = pickle.dump(clf, open(model,'wb'))
+        print('Modelo guardado correctamente')
     
 print("bukatu da")
