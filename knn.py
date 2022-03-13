@@ -127,8 +127,11 @@ if __name__ == '__main__':
         categories_str = str (raw_input("Type all the categories of the dataset separeted by commas \n"))
         categories_str_r = categories_str.replace('\r','')
         categories = categories_str_r.split(",")
+        n_cat = len(categories)
     else:
         categories = list(ml_dataset[classifier].unique())
+        n_cat = len(categories)
+        print(categories)
     
     target_map = { categories[i] : i for i in range(0, len(categories))}
     ml_dataset['__target__'] = ml_dataset[classifier].map(str).map(target_map)
@@ -256,7 +259,7 @@ if __name__ == '__main__':
     #k tendra que ser impar sino podria haber empates
 
     # Ponemos a cada clase un peso balanceado
-    clf.class_weight = "balanced"
+    #clf.class_weight = "balanced"
 
     # Introducimos los valores para el entrenamiento
 
@@ -296,10 +299,16 @@ if __name__ == '__main__':
     
     if oFile != "":    
         f = open(oFile, mode='a')
-        if os.path.getsize(oFile) == 0:
-            f.write("k, p, f1_score, recall, precision\n")
-        f.write("%s, %s" %(str(k),str(d)))
-        f.write(", %s, %s, %s" %(str(f1_score(testY,predictions, average='macro')), str(recall_score(testY,predictions,average="macro")), str(precision_score(testY,predictions, average='macro')))+ "\n")
+        if (n_cat == 2):
+            if os.path.getsize(oFile) == 0:
+                f.write("k, p, f1_score, recall, precision\n")
+            f.write("%s, %s" %(str(k),str(d)))
+            f.write(", %s, %s, %s" %(str(f1_score(testY,predictions, average='macro')), str(recall_score(testY,predictions,average="macro")), str(precision_score(testY,predictions, average='macro')))+ "\n")
+        elif (n_cat > 2):
+            if os.path.getsize(oFile) == 0:
+                f.write("k, p, f1_score, recall, precision\n")
+            f.write("%s, %s" %(str(k),str(d)))
+            f.write(", %s, %s, %s" %(str(f1_score(testY,predictions, average='macro')), str(recall_score(testY,predictions,average="macro")), str(precision_score(testY,predictions, average='macro')))+ "\n")
         f.close()
     
 print("fin")

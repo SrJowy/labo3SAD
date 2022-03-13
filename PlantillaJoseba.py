@@ -2,28 +2,29 @@
 
 # Press Mayus+F10 to execute it or replace it with your code.
 # Press Double Shift to search everywhere for classes, files, tool windows, actions, and settings.
-
-from datetime import datetime
 import getopt
 import sys
 import numpy as np
 import pandas as pd
+import sklearn as sk
+import imblearn
 from imblearn.under_sampling import RandomUnderSampler
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import f1_score
+from sklearn.metrics import precision_score
+from sklearn.metrics import accuracy_score
+from sklearn.metrics import recall_score
 from sklearn.metrics import classification_report
 from sklearn.metrics import confusion_matrix
 from sklearn.neighbors import KNeighborsClassifier
 
 k=1
-d=1
+#kM=sys.argv[2]
+d=2
+
 p='./'
 f="iris.csv"
-oFile=""
-
-def datetime_to_epoch(d):
-    return datetime.datetime(d).strftime('%s')
-    
+oFile="datos.csv"
 
 # Press the green button in the gutter to run the script.
 if __name__ == '__main__':
@@ -73,61 +74,58 @@ if __name__ == '__main__':
 
     #print(ml_dataset.head(5))
 
-    ml_dataset = ml_dataset[
-        ['Largo de sepalo', 'Ancho de sepalo', 'Largo de petalo', 'Ancho de petalo', 'Especie']]
+    ml_dataset = ml_dataset[['Especie', 'Ancho de sepalo', 'Largo de sepalo', 'Largo de petalo', 'Ancho de petalo']]
 
 
-    # Se seleccionan los atributos del dataset que se van a utilizar en el modelo
+    # Imputa los valores numericos, hay que cambiarlo en funcion de los datos que obtengamos de dataiku
 
 
     categorical_features = []
-    numerical_features = ['Largo de sepalo', 'Ancho de sepalo', 'Largo de petalo', 'Ancho de petalo']
+    numerical_features = ['Ancho de sepalo', 'Largo de sepalo', 'Largo de petalo', 'Ancho de petalo']
     text_features = []
     for feature in categorical_features:
-        ml_dataset[feature] = ml_dataset[feature].apply(coerce_to_unicode) #Actualizar el texto a unicode
+        ml_dataset[feature] = ml_dataset[feature].apply(coerce_to_unicode)
 
     for feature in text_features:
-        ml_dataset[feature] = ml_dataset[feature].apply(coerce_to_unicode) #Actualizar el texto a unicode
+        ml_dataset[feature] = ml_dataset[feature].apply(coerce_to_unicode)
 
-    for feature in numerical_features: #M8[ns] --> fecha de 64 bits
-        if ml_dataset[feature].dtype == np.dtype('M8[ns]') or ( #Si el tipo del atributo es 'M8[ns]'
-                hasattr(ml_dataset[feature].dtype, 'base') and ml_dataset[feature].dtype.base == np.dtype('M8[ns]')): #o tiene un atributo llamado 'base' y ese atributo es de tipo 'M8[ns]'
-            ml_dataset[feature] = datetime_to_epoch(ml_dataset[feature]) #convertimos esa fecha a epoch
+    for feature in numerical_features:
+        if ml_dataset[feature].dtype == np.dtype('M8[ns]') or (
+                hasattr(ml_dataset[feature].dtype, 'base') and ml_dataset[feature].dtype.base == np.dtype('M8[ns]')):
+            ml_dataset[feature] = datetime_to_epoch(ml_dataset[feature])
         else:
-            ml_dataset[feature] = ml_dataset[feature].astype('double') #Cambiamos el tipo el del atributo a double
+            ml_dataset[feature] = ml_dataset[feature].astype('double')
 
 
-
-    target_map = {'Iris-setosa': 0, 'Iris-versicolor': 1, 'Iris-virginica': 2} #Categorias en las que vamos a encasillar las instancias
-    ml_dataset['__target__'] = ml_dataset['Especie'].map(str).map(target_map) #Transformamos el dataset en base a las categorias anteriores, teniendo en cuenta el target o atributo que encasilla las insatancias
-    del ml_dataset['Especie'] #Borramos el anterior el dataset 
+    #se pone un numero por cada una de las columnas que tenemos
+    target_map = {'Iris-versicolor': 0, 'Iris-virginica': 1, 'Iris-setosa': 2}
+    ml_dataset['__target__'] = ml_dataset['Especie'].map(str).map(target_map)
+    del ml_dataset['Especie']
 
     # Remove rows for which the target is unknown.
     ml_dataset = ml_dataset[~ml_dataset['__target__'].isnull()]
     print(f)
     print(ml_dataset.head(5))
 
-
-    train, test = train_test_split(ml_dataset,test_size=0.2,random_state=42,stratify=ml_dataset[['__target__']]) #Elegimos la muestra para entrenar el modelo,
-    print(train.head(5))                                                                                         #EL 20% sera para test, indice aleatorio de 42
-    print(train['__target__'].value_counts())                                                                    #y en base al dataset obtenido antes
+    #el 0.2 significa que da el porcentaje de test 20% y 80% train, el ramdom state indica que va a generar para replicar el mismo train y test asi poder comparar experimentos
+    train, test = train_test_split(ml_dataset,test_size=0.2,random_state=42,stratify=ml_dataset[['__target__']])
+    print(train.head(5))
+    print(train['__target__'].value_counts())
     print(test['__target__'].value_counts())
 
     drop_rows_when_missing = []
-    impute_when_missing = [{'feature': 'Largo de sepalo', 'impute_with': 'MEAN'},
-                           {'feature': 'Ancho de sepalo', 'impute_with': 'MEAN'},
-                           {'feature': 'Largo de petalo', 'impute_with': 'MEAN'},
-                           {'feature': 'Ancho de petalo', 'impute_with': 'MEAN'}]
-                           
+    impute_when_missing = [{'feature': 'Ancho de sepalo', 'impute_with': 'MEAN'},
+                       {'feature': 'Largo de sepalo', 'impute_with': 'MEAN'},
+                       {'feature': 'Largo de petalo', 'impute_with': 'MEAN'},
+                       {'feature': 'Ancho de petalo', 'impute_with': 'MEAN'}]
 
-    #Segun el diccionario anterior, se eliminan los atributos que se hayan dado
+    # Imputar valores faltantes cuando esten vacias las filas, se imputan con la media
     for feature in drop_rows_when_missing:
         train = train[train[feature].notnull()]
         test = test[test[feature].notnull()]
-        #print('Dropped missing records in %s' % feature)
+        print('Dropped missing records in %s' % feature)
 
-    # Segun el diccionario anterior, se imputan los valores mediante la media, la mediana, una categoria, el primer valor o una constante. 
-    # Despues se actualizan los valores tanto en el test como en el train 
+    # Explica lo que se hace en este paso
     for feature in impute_when_missing:
         if feature['impute_with'] == 'MEAN':
             v = train[feature['feature']].mean()
@@ -141,14 +139,12 @@ if __name__ == '__main__':
             v = feature['value']
         train[feature['feature']] = train[feature['feature']].fillna(v)
         test[feature['feature']] = test[feature['feature']].fillna(v)
-        #print('Imputed missing values in feature %s with value %s' % (feature['feature'], coerce_to_unicode(v)))
+        print('Imputed missing values in feature %s with value %s' % (feature['feature'], coerce_to_unicode(v)))
 
 
 
-    rescale_features = {}
-    
-    #Se reescalan los valores con respecto al diccionario dado antes por si la muestra se encuentra desbalanceada.
-    #Dependiendo del atributo se utiliza MINMAX o la desviacion tipica
+    rescale_features = {'Ancho de sepalo': 'AVGSTD', 'Largo de sepalo': 'AVGSTD', 'Largo de petalo': 'AVGSTD',
+                    'Ancho de petalo': 'AVGSTD'}
     for (feature_name, rescale_method) in rescale_features.items():
         if rescale_method == 'MINMAX':
             _min = train[feature_name].min()
@@ -158,17 +154,17 @@ if __name__ == '__main__':
         else:
             shift = train[feature_name].mean()
             scale = train[feature_name].std()
-        if scale == 0.: #Si no hay desviacion tipica se ignora ese atributo
+        if scale == 0.:
             del train[feature_name]
             del test[feature_name]
-            #print('Feature %s was dropped because it has no variance' % feature_name)
+            print('Feature %s was dropped because it has no variance' % feature_name)
         else:
-            #print('Rescaled %s' % feature_name)
+            print('Rescaled %s' % feature_name)
             train[feature_name] = (train[feature_name] - shift).astype(np.float64) / scale
             test[feature_name] = (test[feature_name] - shift).astype(np.float64) / scale
 
 
-    trainX = train.drop('__target__', axis=1) #Eliminamos la columna con el atributo que clasifica a las instancias
+    trainX = train.drop('__target__', axis=1)
     #trainY = train['__target__']
 
     testX = test.drop('__target__', axis=1)
@@ -177,35 +173,44 @@ if __name__ == '__main__':
     trainY = np.array(train['__target__'])
     testY = np.array(test['__target__'])
 
-    # Explica lo que se hace en este paso
+    #CUANDO NO ESTAN BALANCEADOS SE PONE EL UNDERSAMPLE.
+    #SI HAY POCOS DATOS SE PONE UNDERSAMPLE
+
+    #undersample = elimina aquellas que aparezcan muchas veces para que no me desbalanceen los datos
+    #oversample = replicar las instancias que aprecen pocas veces y als copia tantas veces como para que se estabilice | smote crea instancias nuevas haciendo medias entre instancias
+
+
     #undersample = RandomUnderSampler(sampling_strategy=0.5)#la mayoria va a estar representada el doble de veces
 
     #trainXUnder,trainYUnder = undersample.fit_resample(trainX,trainY)
     #testXUnder,testYUnder = undersample.fit_resample(testX, testY)
 
+    # Explica lo que se hace en este paso
 
-
-
-
-
-    # Calcular el valor del knn
+    #vamos a realizar un while desde la k minima hasta la k maxima para que genere todas las combinaciones posibles con la k y con la d
+    x=1
+    #while   x<=int(d):
+        #j=int(k)
+        #while j<=int(kM):
     clf = KNeighborsClassifier(n_neighbors=5,
-                          weights='uniform',
-                          algorithm='auto',
-                          leaf_size=30,
-                          p=2)
+                              weights='uniform',
+                              algorithm='auto',
+                              leaf_size=30,
+                              p=2)
+    #j=j+2
 
-    # Ponemos a cada clase un peso balanceado
+
+            # Especifica el peso, en este caso que este balanceado
+
     clf.class_weight = "balanced"
 
-    # Introducimos los valores para el entrenamiento
+            # ejecuta el metodo tambien para el test
 
     clf.fit(trainX, trainY)
 
+            # Build up our result dataset
 
-# Build up our result dataset
-
-# The model is now trained, we can apply it to our test set:
+            # The model is now trained, we can apply it to our test set:
 
     predictions = clf.predict(testX)
     probas = clf.predict_proba(testX)
@@ -217,7 +222,7 @@ if __name__ == '__main__':
     ]
     probabilities = pd.DataFrame(data=probas, index=testX.index, columns=cols)
 
-# Build scored dataset
+            # Build scored dataset
     results_test = testX.join(predictions, how='left')
     results_test = results_test.join(probabilities, how='left')
     results_test = results_test.join(test['__target__'], how='left')
@@ -229,15 +234,20 @@ if __name__ == '__main__':
         i+=1
         if i>5:
             break
+    #editar para que te devuelva el f1_score, precision, recall y accuracy_score con una media, con una media Macro Y Micro
+    #Cuando tenemos binario el fscore es None
+    #Si es multiclass es macro
+    f1 = (f1_score(testY, predictions, average="macro"))
+    precision =(precision_score(testY, predictions, average='macro'))
+    accuracy = (accuracy_score(testY, predictions))
+    recall = (recall_score(testY, predictions, average="macro"))
 
-    print(f1_score(testY, predictions, average='macro'))
+    #tabla donde te sale todos los parametros
     print(classification_report(testY,predictions))
     print(confusion_matrix(testY, predictions))
-    
-    #if oFile != "":    
-    #    f = open(oFile, mode = 'w')
-    #    f.write(str(f1_score(testY, predictions, average=None))+ "\n")
-    #    f.write(str(classification_report(testY,predictions))+ "\n")
-    #    f.write(str(confusion_matrix(testY, predictions, labels=[1,0])))
-    
-print("bukatu da")
+    file = open("datos.csv" , 'a')
+    file.write( str(j)+", "+ str(x) +", "+ str(precision) +", " + str(recall)+ ", " + str(f1) + "\n")
+    print( "-f1-score: \n" + str(f1) +"\n-Precision: \n" + str(precision)+ "\n-Accuracy: \n" + str(accuracy) + "\nRecall: \n" + str(recall))
+
+        #x=x+1
+    print("bukatu da")
