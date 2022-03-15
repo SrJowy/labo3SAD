@@ -15,7 +15,7 @@ do
         min_sl=$5
         while [ $min_sl -le $max_sl ]
         do
-            python trees.py -m $min_d -s $min_ss -l $min_sl -a -c Especie -o fT.csv
+            python trees_def.py -m $min_d -s $min_ss -l $min_sl -o fT.csv
             let min_sl=min_sl+1
         done
         let min_ss=min_ss+1

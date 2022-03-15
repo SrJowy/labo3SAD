@@ -76,11 +76,7 @@ if __name__ == '__main__':
         else:
             return str(x)
 
-    #Abrir el fichero .csv y cargarlo en un dataframe de pandas
     ml_dataset = pd.read_csv(iFile)
-
-    #comprobar que los datos se han cargado bien. Cuidado con las cabeceras, la primera linea por defecto la considerara como la que almacena los nombres de los atributos
-    # comprobar los parametros por defecto del pd.read_csv en lo referente a las cabeceras si no se quiere lo comentado
 
     #print(ml_dataset.head(5))
 
@@ -89,9 +85,6 @@ if __name__ == '__main__':
     
     columns = list(ml_dataset.columns)
     ml_dataset = ml_dataset[columns]
-
-
-    # Se seleccionan los atributos del dataset que se van a utilizar en el modelo
 
 
     categorical_features = []
@@ -123,7 +116,6 @@ if __name__ == '__main__':
     ml_dataset['__target__'] = ml_dataset[classifier].map(str).map(target_map) #Transformamos el dataset en base a las categorias anteriores, teniendo en cuenta el target o atributo que encasilla las insatancias
     del ml_dataset[classifier] #Borramos el anterior el dataset 
 
-    # Remove rows for which the target is unknown.
     ml_dataset = ml_dataset[~ml_dataset['__target__'].isnull()]
     print(f)
     print(ml_dataset.head(5))
@@ -145,14 +137,10 @@ if __name__ == '__main__':
     for i in range(0, len(column_vals)):
         impute_when_missing.append({'feature': column_vals[i], 'impute_with' : 'MEAN'})
 
-    #Segun el diccionario anterior, se eliminan los atributos que se hayan dado
     for feature in drop_rows_when_missing:
         train = train[train[feature].notnull()]
         test = test[test[feature].notnull()]
-        #print('Dropped missing records in %s' % feature)
 
-    # Segun el diccionario anterior, se imputan los valores mediante la media, la mediana, una categoria, el primer valor o una constante. 
-    # Despues se actualizan los valores tanto en el test como en el train 
     for feature in impute_when_missing:
         if feature['impute_with'] == 'MEAN':
             v = train[feature['feature']].mean()
@@ -171,13 +159,11 @@ if __name__ == '__main__':
 
     #column_vals = list(ml_dataset.columns)
     #column_vals.remove('__target__')
-    rescale_features={} #Usar cuando los valores estén desbalanceados
+    rescale_features={} #Usar cuando los valores esten desbalanceados
     #for i in range(0, len(column_vals)): 
     #    rescale_features.update({column_vals[i] : 'AVGSTD'})
     
     
-    #Se reescalan los valores con respecto al diccionario dado antes por si la muestra se encuentra desbalanceada.
-    #Dependiendo del atributo se utiliza MINMAX o la desviacion tipica
     for (feature_name, rescale_method) in rescale_features.items():
         if rescale_method == 'MINMAX':
             _min = train[feature_name].min()
@@ -206,23 +192,18 @@ if __name__ == '__main__':
     trainY = np.array(train['__target__'])
     testY = np.array(test['__target__'])
 
-    # Explica lo que se hace en este paso
     #undersample = RandomUnderSampler(sampling_strategy=0.5)#la mayoria va a estar representada el doble de veces
 
     #trainXUnder,trainYUnder = undersample.fit_resample(trainX,trainY)
     #testXUnder,testYUnder = undersample.fit_resample(testX, testY)
 
-    # Calcular el valor del knn
     clf = KNeighborsClassifier(n_neighbors=5,
                           weights=m,
                           algorithm='auto',
                           leaf_size=30,
                           p=2)
 
-    # Ponemos a cada clase un peso balanceado
     clf.class_weight = "balanced"
-
-    # Introducimos los valores para el entrenamiento
 
     clf.fit(trainX, trainY)
 
@@ -269,7 +250,7 @@ if __name__ == '__main__':
             if os.path.getsize(oFile) == 0:
                 f.write("k, p, m, MACRO_f1_score, MICRO_f1_score, AVG_f1_score, AVG_recall, AVG_precision\n")
             f.write("%s, %s, %s" %(str(k),str(d), m))
-            f.write(", %s, %s, %s %s %s" %(str(f1_score(testY,predictions, average='macro')), str(f1_score(testY,predictions, average='micro')), str(f1_score(testY,predictions, average='weighted')), str(recall_score(testY,predictions,average="macro")), str(precision_score(testY,predictions, average='macro')))+ "\n")
+            f.write(", %s, %s, %s, %s, %s" %(str(f1_score(testY,predictions, average='macro')), str(f1_score(testY,predictions, average='micro')), str(f1_score(testY,predictions, average='weighted')), str(recall_score(testY,predictions,average="macro")), str(precision_score(testY,predictions, average='macro')))+ "\n")
         f.close()
         
     if r == '1':

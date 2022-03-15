@@ -24,6 +24,7 @@ p='./'
 f="iris.csv"
 oFile=""
 r=0
+classifier="Especie"
 
 def datetime_to_epoch(d):
     return datetime.datetime(d).strftime('%s')
@@ -73,7 +74,7 @@ if __name__ == '__main__':
         else:
             return str(x)
 
-    #Abrir el fichero .csv y cargarlo en un dataframe de pandas
+     #Abrir el fichero .csv y cargarlo en un dataframe de pandas
     ml_dataset = pd.read_csv(iFile)
 
     #comprobar que los datos se han cargado bien. Cuidado con las cabeceras, la primera linea por defecto la considerara como la que almacena los nombres de los atributos
@@ -81,15 +82,22 @@ if __name__ == '__main__':
 
     #print(ml_dataset.head(5))
 
-    ml_dataset = ml_dataset[
-        ['Largo de sepalo', 'Ancho de sepalo', 'Largo de petalo', 'Ancho de petalo', 'Especie']]
+    #ml_dataset = ml_dataset[
+    #    ['Largo de sepalo', 'Ancho de sepalo', 'Largo de petalo', 'Ancho de petalo', 'Especie']]
+    
+    columns = list(ml_dataset.columns)
+    ml_dataset = ml_dataset[columns]
 
 
     # Se seleccionan los atributos del dataset que se van a utilizar en el modelo
 
 
     categorical_features = []
-    numerical_features = ['Largo de sepalo', 'Ancho de sepalo', 'Largo de petalo', 'Ancho de petalo']
+    #numerical_features = ['Largo de sepalo', 'Ancho de sepalo', 'Largo de petalo', 'Ancho de petalo']
+    
+    numerical_features = list(ml_dataset.columns)
+    numerical_features.remove(classifier)
+    
     text_features = []
     for feature in categorical_features:
         ml_dataset[feature] = ml_dataset[feature].apply(coerce_to_unicode) #Actualizar el texto a unicode
@@ -106,10 +114,12 @@ if __name__ == '__main__':
 
 
 
-    target_map = {'Iris-setosa': 0, 'Iris-versicolor': 1, 'Iris-virginica': 2} #Categorias en las que vamos a encasillar las instancias
+    #target_map = {'Iris-setosa': 0, 'Iris-versicolor': 1, 'Iris-virginica': 2} #Categorias en las que vamos a encasillar las instancias
+    categories = list(ml_dataset[classifier].unique())
+    target_map = { categories[i] : i for i in range(0, len(categories))}
     n_cat = len(target_map)
-    ml_dataset['__target__'] = ml_dataset['Especie'].map(str).map(target_map) #Transformamos el dataset en base a las categorias anteriores, teniendo en cuenta el target o atributo que encasilla las insatancias
-    del ml_dataset['Especie'] #Borramos el anterior el dataset 
+    ml_dataset['__target__'] = ml_dataset[classifier].map(str).map(target_map) #Transformamos el dataset en base a las categorias anteriores, teniendo en cuenta el target o atributo que encasilla las insatancias
+    del ml_dataset[classifier] #Borramos el anterior el dataset 
 
     # Remove rows for which the target is unknown.
     ml_dataset = ml_dataset[~ml_dataset['__target__'].isnull()]
@@ -123,11 +133,15 @@ if __name__ == '__main__':
     print(test['__target__'].value_counts())
 
     drop_rows_when_missing = []
-    impute_when_missing = [{'feature': 'Largo de sepalo', 'impute_with': 'MEAN'},
-                           {'feature': 'Ancho de sepalo', 'impute_with': 'MEAN'},
-                           {'feature': 'Largo de petalo', 'impute_with': 'MEAN'},
-                           {'feature': 'Ancho de petalo', 'impute_with': 'MEAN'}]
-                           
+    #impute_when_missing = [{'feature': 'Largo de sepalo', 'impute_with': 'MEAN'},
+    #                       {'feature': 'Ancho de sepalo', 'impute_with': 'MEAN'},
+    #                       {'feature': 'Largo de petalo', 'impute_with': 'MEAN'},
+    #                       {'feature': 'Ancho de petalo', 'impute_with': 'MEAN'}]
+    column_vals = list(ml_dataset.columns)
+    column_vals.remove('__target__')
+    impute_when_missing = []
+    for i in range(0, len(column_vals)):
+        impute_when_missing.append({'feature': column_vals[i], 'impute_with' : 'MEAN'})
 
     #Segun el diccionario anterior, se eliminan los atributos que se hayan dado
     for feature in drop_rows_when_missing:
@@ -153,8 +167,12 @@ if __name__ == '__main__':
         #print('Imputed missing values in feature %s with value %s' % (feature['feature'], coerce_to_unicode(v)))
 
 
-
-    rescale_features = {}
+    #column_vals = list(ml_dataset.columns)
+    #column_vals.remove('__target__')
+    rescale_features={} #Usar cuando los valores esten desbalanceados
+    #for i in range(0, len(column_vals)): 
+    #    rescale_features.update({column_vals[i] : 'AVGSTD'})
+    
     
     #Se reescalan los valores con respecto al diccionario dado antes por si la muestra se encuentra desbalanceada.
     #Dependiendo del atributo se utiliza MINMAX o la desviacion tipica
@@ -240,14 +258,14 @@ if __name__ == '__main__':
         f = open(oFile, mode='a')
         if (n_cat == 2):
             if os.path.getsize(oFile) == 0:
-                f.write("k, p, f1_score, recall, precision\n")
+                f.write("mx, mss, msl, f1_score, recall, precision\n")
             f.write("%s, %s, %s" %(str(mx),str(mss), str(msl)))
             f.write(", %s, %s, %s" %(str(f1_score(testY,predictions)), str(recall_score(testY,predictions)), str(precision_score(testY,predictions)))+ "\n")
         elif (n_cat > 2):
             if os.path.getsize(oFile) == 0:
-                   f.write("k, p, m, MACRO_f1_score, MICRO_f1_score, AVG_f1_score, AVG_recall, AVG_precision\n")
+                   f.write("mx, mss, msl, MACRO_f1_score, MICRO_f1_score, AVG_f1_score, AVG_recall, AVG_precision\n")
             f.write("%s, %s, %s" %(str(mx), str(mss), str(msl)))
-            f.write(", %s, %s, %s %s %s" %(str(f1_score(testY,predictions, average='macro')), str(f1_score(testY,predictions, average='micro')), str(f1_score(testY,predictions, average='weighted')), str(recall_score(testY,predictions,average="macro")), str(precision_score(testY,predictions, average='macro')))+ "\n")
+            f.write(", %s, %s, %s %s %s" %(str(f1_score(testY,predictions, average='macro')), str(f1_score(testY,predictions, average='micro')), str(f1_score(testY,predictions, average='weighted')), str(recall_score(testY,predictions,average="weighted")), str(precision_score(testY,predictions, average='weighted')))+ "\n")
         f.close()
         
     if r == '1':
