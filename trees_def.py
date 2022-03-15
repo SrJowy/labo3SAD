@@ -21,10 +21,10 @@ mx = 3
 mss = 2
 msl = 1
 p='./'
-f="iris.csv"
+f="train.csv"
 oFile=""
 r=0
-classifier="Especie"
+classifier="TARGET"
 
 def datetime_to_epoch(d):
     return datetime.datetime(d).strftime('%s')
@@ -116,7 +116,7 @@ if __name__ == '__main__':
 
     #target_map = {'Iris-setosa': 0, 'Iris-versicolor': 1, 'Iris-virginica': 2} #Categorias en las que vamos a encasillar las instancias
     categories = list(ml_dataset[classifier].unique())
-    target_map = { categories[i] : i for i in range(0, len(categories))}
+    target_map = { str(categories[i]) : i for i in range(0, len(categories))}
     n_cat = len(target_map)
     ml_dataset['__target__'] = ml_dataset[classifier].map(str).map(target_map) #Transformamos el dataset en base a las categorias anteriores, teniendo en cuenta el target o atributo que encasilla las insatancias
     del ml_dataset[classifier] #Borramos el anterior el dataset 
@@ -167,11 +167,11 @@ if __name__ == '__main__':
         #print('Imputed missing values in feature %s with value %s' % (feature['feature'], coerce_to_unicode(v)))
 
 
-    #column_vals = list(ml_dataset.columns)
-    #column_vals.remove('__target__')
+    column_vals = list(ml_dataset.columns)
+    column_vals.remove('__target__')
     rescale_features={} #Usar cuando los valores esten desbalanceados
-    #for i in range(0, len(column_vals)): 
-    #    rescale_features.update({column_vals[i] : 'AVGSTD'})
+    for i in range(0, len(column_vals)): 
+        rescale_features.update({column_vals[i] : 'AVGSTD'})
     
     
     #Se reescalan los valores con respecto al diccionario dado antes por si la muestra se encuentra desbalanceada.
@@ -205,10 +205,10 @@ if __name__ == '__main__':
     testY = np.array(test['__target__'])
 
     # Explica lo que se hace en este paso
-    #undersample = RandomUnderSampler(sampling_strategy=0.5)#la mayoria va a estar representada el doble de veces
+    undersample = RandomUnderSampler(sampling_strategy=0.5)#la mayoria va a estar representada el doble de veces
 
-    #trainXUnder,trainYUnder = undersample.fit_resample(trainX,trainY)
-    #testXUnder,testYUnder = undersample.fit_resample(testX, testY)
+    trainXUnder,trainYUnder = undersample.fit_resample(trainX,trainY)
+    testXUnder,testYUnder = undersample.fit_resample(testX, testY)
 
     # Calcular el valor del knn
     clf = tree.DecisionTreeClassifier(max_depth=mx,
@@ -260,7 +260,7 @@ if __name__ == '__main__':
             if os.path.getsize(oFile) == 0:
                 f.write("mx, mss, msl, f1_score, recall, precision\n")
             f.write("%s, %s, %s" %(str(mx),str(mss), str(msl)))
-            f.write(", %s, %s, %s" %(str(f1_score(testY,predictions)), str(recall_score(testY,predictions)), str(precision_score(testY,predictions)))+ "\n")
+            f.write(", %s, %s, %s" %(str(f1_score(testY,predictions, average=None)), str(recall_score(testY,predictions, average=None)), str(precision_score(testY,predictions, average=None)))+ "\n")
         elif (n_cat > 2):
             if os.path.getsize(oFile) == 0:
                    f.write("mx, mss, msl, MACRO_f1_score, MICRO_f1_score, AVG_f1_score, AVG_recall, AVG_precision\n")

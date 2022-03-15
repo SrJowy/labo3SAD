@@ -21,11 +21,11 @@ import pickle
 k=1
 d=1
 p='./'
-f="iris.csv"
+f="train.csv"
 oFile=""
 m="uniform"
 r=0
-classifier = "Especie"
+classifier = "TARGET"
 
 def datetime_to_epoch(d):
     return datetime.datetime(d).strftime('%s')
@@ -65,7 +65,6 @@ if __name__ == '__main__':
         iFile=p+str(f)
     else:
         iFile = p+"/" + str(f)
-    # astype('unicode') does not work as expected
 
     def coerce_to_unicode(x):
         if sys.version_info < (3, 0):
@@ -88,42 +87,43 @@ if __name__ == '__main__':
 
 
     categorical_features = []
-    #numerical_features = ['Largo de sepalo', 'Ancho de sepalo', 'Largo de petalo', 'Ancho de petalo']
     
+    #numerical_features = ['Largo de sepalo', 'Ancho de sepalo', 'Largo de petalo', 'Ancho de petalo']
     numerical_features = list(ml_dataset.columns)
     numerical_features.remove(classifier)
     
     text_features = []
+    
     for feature in categorical_features:
-        ml_dataset[feature] = ml_dataset[feature].apply(coerce_to_unicode) #Actualizar el texto a unicode
+        ml_dataset[feature] = ml_dataset[feature].apply(coerce_to_unicode)
 
     for feature in text_features:
-        ml_dataset[feature] = ml_dataset[feature].apply(coerce_to_unicode) #Actualizar el texto a unicode
+        ml_dataset[feature] = ml_dataset[feature].apply(coerce_to_unicode)
 
-    for feature in numerical_features: #M8[ns] --> fecha de 64 bits
-        if ml_dataset[feature].dtype == np.dtype('M8[ns]') or ( #Si el tipo del atributo es 'M8[ns]'
-                hasattr(ml_dataset[feature].dtype, 'base') and ml_dataset[feature].dtype.base == np.dtype('M8[ns]')): #o tiene un atributo llamado 'base' y ese atributo es de tipo 'M8[ns]'
-            ml_dataset[feature] = datetime_to_epoch(ml_dataset[feature]) #convertimos esa fecha a epoch
+    for feature in numerical_features:
+        if ml_dataset[feature].dtype == np.dtype('M8[ns]') or ( 
+                hasattr(ml_dataset[feature].dtype, 'base') and ml_dataset[feature].dtype.base == np.dtype('M8[ns]')):
+            ml_dataset[feature] = datetime_to_epoch(ml_dataset[feature])
         else:
-            ml_dataset[feature] = ml_dataset[feature].astype('double') #Cambiamos el tipo el del atributo a double
+            ml_dataset[feature] = ml_dataset[feature].astype('double')
 
 
 
     #target_map = {'Iris-setosa': 0, 'Iris-versicolor': 1, 'Iris-virginica': 2} #Categorias en las que vamos a encasillar las instancias
     categories = list(ml_dataset[classifier].unique())
-    target_map = { categories[i] : i for i in range(0, len(categories))}
+    target_map = { str(categories[i]) : i for i in range(0, len(categories))}
     n_cat = len(target_map)
-    ml_dataset['__target__'] = ml_dataset[classifier].map(str).map(target_map) #Transformamos el dataset en base a las categorias anteriores, teniendo en cuenta el target o atributo que encasilla las insatancias
-    del ml_dataset[classifier] #Borramos el anterior el dataset 
+    ml_dataset['__target__'] = ml_dataset[classifier].map(str).map(target_map)
+    del ml_dataset[classifier] 
 
-    ml_dataset = ml_dataset[~ml_dataset['__target__'].isnull()]
+    #ml_dataset = ml_dataset[~ml_dataset['__target__'].isnull()]
     print(f)
     print(ml_dataset.head(5))
 
 
-    train, test = train_test_split(ml_dataset,test_size=0.2,random_state=42,stratify=ml_dataset[['__target__']]) #Elegimos la muestra para entrenar el modelo,
-    print(train.head(5))                                                                                         #EL 20% sera para test, indice aleatorio de 42
-    print(train['__target__'].value_counts())                                                                    #y en base al dataset obtenido antes
+    train, test = train_test_split(ml_dataset,test_size=0.2,random_state=42,stratify=ml_dataset[['__target__']])
+    print(train.head(5))                                                                                         
+    print(train['__target__'].value_counts())                                                                    
     print(test['__target__'].value_counts())
 
     drop_rows_when_missing = []
@@ -154,14 +154,13 @@ if __name__ == '__main__':
             v = feature['value']
         train[feature['feature']] = train[feature['feature']].fillna(v)
         test[feature['feature']] = test[feature['feature']].fillna(v)
-        #print('Imputed missing values in feature %s with value %s' % (feature['feature'], coerce_to_unicode(v)))
 
 
-    #column_vals = list(ml_dataset.columns)
-    #column_vals.remove('__target__')
-    rescale_features={} #Usar cuando los valores esten desbalanceados
-    #for i in range(0, len(column_vals)): 
-    #    rescale_features.update({column_vals[i] : 'AVGSTD'})
+    column_vals = list(ml_dataset.columns)
+    column_vals.remove('__target__')
+    rescale_features={}
+    for i in range(0, len(column_vals)): 
+        rescale_features.update({column_vals[i] : 'AVGSTD'})
     
     
     for (feature_name, rescale_method) in rescale_features.items():
@@ -173,12 +172,10 @@ if __name__ == '__main__':
         else:
             shift = train[feature_name].mean()
             scale = train[feature_name].std()
-        if scale == 0.: #Si no hay desviacion tipica se ignora ese atributo
+        if scale == 0.:
             del train[feature_name]
             del test[feature_name]
-            #print('Feature %s was dropped because it has no variance' % feature_name)
         else:
-            #print('Rescaled %s' % feature_name)
             train[feature_name] = (train[feature_name] - shift).astype(np.float64) / scale
             test[feature_name] = (test[feature_name] - shift).astype(np.float64) / scale
 
@@ -192,16 +189,16 @@ if __name__ == '__main__':
     trainY = np.array(train['__target__'])
     testY = np.array(test['__target__'])
 
-    #undersample = RandomUnderSampler(sampling_strategy=0.5)#la mayoria va a estar representada el doble de veces
+    undersample = RandomUnderSampler(sampling_strategy=0.5)#la mayoria va a estar representada el doble de veces
 
-    #trainXUnder,trainYUnder = undersample.fit_resample(trainX,trainY)
-    #testXUnder,testYUnder = undersample.fit_resample(testX, testY)
+    trainXUnder,trainYUnder = undersample.fit_resample(trainX,trainY)
+    testXUnder,testYUnder = undersample.fit_resample(testX, testY)
 
-    clf = KNeighborsClassifier(n_neighbors=5,
+    clf = KNeighborsClassifier(n_neighbors=k,
                           weights=m,
                           algorithm='auto',
                           leaf_size=30,
-                          p=2)
+                          p=d)
 
     clf.class_weight = "balanced"
 
@@ -245,7 +242,7 @@ if __name__ == '__main__':
             if os.path.getsize(oFile) == 0:
                 f.write("k, p, m, f1_score, recall, precision\n")
             f.write("%s, %s, %s" %(str(k),str(d), m))
-            f.write(", %s, %s, %s" %(str(f1_score(testY,predictions)), str(recall_score(testY,predictions)), str(precision_score(testY,predictions)))+ "\n")
+            f.write(", %s, %s, %s" %(str(f1_score(testY,predictions, average=None)), str(recall_score(testY,predictions, average=None)), str(precision_score(testY,predictions, average=None)))+ "\n")
         elif (n_cat > 2):
             if os.path.getsize(oFile) == 0:
                 f.write("k, p, m, MACRO_f1_score, MICRO_f1_score, AVG_f1_score, AVG_recall, AVG_precision\n")
